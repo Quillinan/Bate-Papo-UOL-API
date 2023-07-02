@@ -4,6 +4,7 @@ import { MongoClient } from "mongodb";
 import "dotenv/config";
 import Joi from "joi";
 import dayjs from 'dayjs';
+import stripHtml from 'string-strip-html';
 
 // Criação do app
 const app = express();
@@ -39,18 +40,20 @@ app.post("/participants", async (req, res) => {
     return res.status(422).send(errors);
   }
 
+  const sanitizedName = stripHtml(name).result.trim();
+
   try {
-    const participant = await db.collection("participants").findOne({ name: name });
+    const participant = await db.collection("participants").findOne({ name: sanitizedName });
     if (participant) return res.status(409).send("Nome já está sendo usado!");
 
     const newParticipant = {
-      name,
+      name: sanitizedName,
       lastStatus: Date.now()
     };
 
     await db.collection("participants").insertOne(newParticipant);
     const successMessage = {
-      from: name,
+      from: sanitizedName,
       to: "Todos",
       text: "entra na sala...",
       type: "status",
@@ -63,6 +66,7 @@ app.post("/participants", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+
 
 // Rota GET /participants
 app.get("/participants", async (_, res) => {
@@ -96,11 +100,15 @@ app.post("/messages", async (req, res) => {
     return res.status(422).send(errors);
   }
 
+  const sanitizedFrom = stripHtml(from).result.trim();
+  const sanitizedTo = stripHtml(to).result.trim();
+  const sanitizedText = stripHtml(text).result.trim();
+
   try {
     const newMessage = {
-      from,
-      to,
-      text,
+      from: sanitizedFrom,
+      to: sanitizedTo,
+      text: sanitizedText,
       type,
       time: dayjs().format('HH:mm:ss')
     };
