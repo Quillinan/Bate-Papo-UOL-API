@@ -197,7 +197,7 @@ const removeInactiveParticipants = async () => {
 //Server
 removeInactiveParticipants();
 
-// setInterval(removeInactiveParticipants, 15000);
+setInterval(removeInactiveParticipants, 15000);
 
 const PORT = 5000;
 app.listen(PORT, () => {
