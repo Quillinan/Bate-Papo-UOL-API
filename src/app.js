@@ -221,14 +221,14 @@ app.delete('/messages/:id', async (req, res) => {
   const id = req.params.id;
 
   try {
-    
-    const message = await db.collection('messages').findOne({
-      _id: new ObjectId(id),
-      from: user
-    });
+    const message = await db.collection('messages').findOne({ _id: new ObjectId(id) });
 
     if (!message) {
-      return res.status(404).send('Erro ao excluir mensagem');
+      return res.status(404).send('Mensagem não encontrada');
+    }
+
+    if (message.from !== user) {
+      return res.status(401).send('Sem permissão para excluir a mensagem');
     }
 
     await db.collection('messages').deleteOne({ _id: new ObjectId(id) });
