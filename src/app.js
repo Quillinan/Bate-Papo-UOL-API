@@ -1,10 +1,10 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import "dotenv/config";
 import Joi from "joi";
 import dayjs from 'dayjs';
-import stripHtml from 'string-strip-html';
+import { stripHtml } from 'string-strip-html';
 
 // Criação do app
 const app = express();
@@ -205,9 +205,36 @@ const removeInactiveParticipants = async () => {
 //Server
 removeInactiveParticipants();
 
-setInterval(removeInactiveParticipants, 15000);
+// setInterval(removeInactiveParticipants, 15000);
 
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+
+//Bônus:
+
+// Rota DELETE /messages/:id
+app.delete('/messages/:id', async (req, res) => {
+  const user = req.headers.user;
+  const id = req.params.id;
+
+  try {
+    
+    const message = await db.collection('messages').findOne({
+      _id: new ObjectId(id),
+      from: user
+    });
+
+    if (!message) {
+      return res.status(404).send('Erro ao excluir mensagem');
+    }
+
+    await db.collection('messages').deleteOne({ _id: new ObjectId(id) });
+    res.sendStatus(204);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
