@@ -56,7 +56,10 @@ app.post("/participants", async (req, res) => {
       type: "status",
       time: dayjs().format('HH:mm:ss')
     };
-    return res.status(201).json(successMessage);
+
+    await db.collection("messages").insertOne(successMessage);
+
+    return res.status(201);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -80,7 +83,7 @@ app.post("/messages", async (req, res) => {
   const schemaMessage = Joi.object({
     to: Joi.string().required(),
     text: Joi.string().required(),
-    type: Joi.string().required()
+    type: Joi.string().valid('message', 'private_message').required()
   });
 
   const participant = await db.collection("participants").findOne({ name: from });
