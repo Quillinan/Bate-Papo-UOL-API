@@ -112,3 +112,34 @@ app.post("/messages", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+
+// Rota GET /messages
+app.get('/messages', async (req, res) => {
+  const user = req.headers.user;
+  const { limit } = req.query;
+
+  try {
+    let query = {
+      $or: [
+        { type: 'message' },
+        { to: user },
+        { from: user },
+        { from: 'Todos' }
+      ]
+    };
+
+    let messages = await db.collection('messages').find(query).toArray();
+
+    if (limit) {
+      const limitFilter = parseInt(limit);
+      if (isNaN(limitFilter) || limitFilter <= 0) {
+        return res.status(422).send("Limite inválido");
+      }
+      messages = messages.slice(-limitFilter);
+    }
+
+    res.send(messages);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
