@@ -3,6 +3,7 @@ import cors from "cors";
 import { MongoClient } from "mongodb";
 import "dotenv/config";
 import Joi from "joi";
+import dayjs from 'dayjs';
 
 // Criação do app
 const app = express();
@@ -56,7 +57,7 @@ app.post("/participants", async (req, res) => {
       to: "Todos",
       text: "entra na sala...",
       type: "status",
-      time: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      time: dayjs().format('HH:mm:ss')
     };
     return res.status(201).json(successMessage);
   } catch (err) {
@@ -69,6 +70,44 @@ app.get("/participants", async (_, res) => {
   try {
     const participants = await db.collection("participants").find().toArray();
     return res.status(201).json(participants);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Rota POST /messages
+app.post("/messages", async (req, res) => {
+  const { to, text, type } = req.body;
+  const from = req.headers.user;
+
+  const schemaMessage = Joi.object({
+    to: Joi.string().required(),
+    text: Joi.string().required(),
+    type: Joi.string().required()
+  });
+
+  const participant = await db.collection("participants").findOne({ name: from });
+
+  if (!participant) return res.status(422).send("Remetente não existe!");
+
+  const validation = schemaMessage.validate({ to, text, type }, { abortEarly: false });
+
+  if (validation.error) {
+    const errors = validation.error.details.map(detail => detail.message);
+    return res.status(422).send(errors);
+  }
+
+  try {
+    const newMessage = {
+      from,
+      to,
+      text,
+      type,
+      time: dayjs().format('HH:mm:ss')
+    };
+
+    await db.collection("messages").insertOne(newMessage);
+    return res.status(201).json(newMessage);
   } catch (err) {
     res.status(500).send(err.message);
   }
