@@ -17,10 +17,7 @@ const mongoClient = new MongoClient(process.env.DATABASE_URL);
 
 try {
 	await mongoClient.connect() // top level await
-	console.log("MongoDB conectado!")
-  app.listen(5000, () => {
-    console.log('Servidor rodando na porta 5000');
-  });
+	console.log("MongoDB conectado!");
 } catch (err) {
 	(err) => console.log(err.message)
 }
@@ -142,4 +139,64 @@ app.get('/messages', async (req, res) => {
   } catch (err) {
     res.status(500).send(err.message);
   }
+});
+
+// Rota POST /status
+app.post('/status', async (req, res) => {
+  const user = req.headers.user;
+
+  const participant = await db.collection('participants').findOne({ name: user });
+    
+  if (!participant) return res.status(404).send('Participante não existe');
+
+  try {
+    await db.collection('participants')
+      .updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
+      .then(() => res.sendStatus(200));
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Função para remover participantes inativos
+const removeInactiveParticipants = async () => {
+  const timeLimit = dayjs().subtract(10, 'second').valueOf();
+
+  try {
+    const removedParticipants = await db.collection('participants').find({
+      lastStatus: { $lt: timeLimit }
+    }).toArray();
+
+    await db.collection('participants').deleteMany({
+      lastStatus: { $lt: timeLimit }
+    });
+
+    console.log('Participantes inativos removidos');
+
+    for (const participant of removedParticipants) {
+      const newMessage = {
+        from: participant.name,
+        to: 'Todos',
+        text: 'sai da sala...',
+        type: 'status',
+        time: dayjs().format('HH:mm:ss')
+      };
+
+      await db.collection('messages').insertOne(newMessage);
+
+      console.log(`Mensagem de saída registrada para o participante ${participant.name}`);
+    }
+  } catch (err) {
+    console.error('Erro ao remover participantes inativos:', err);
+  }
+};
+
+//Server
+removeInactiveParticipants();
+
+setInterval(removeInactiveParticipants, 15000);
+
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
