@@ -63,3 +63,13 @@ app.post("/participants", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+
+// Rota GET /participants
+app.get("/participants", async (_, res) => {
+  try {
+    const participants = await db.collection("participants").find().toArray();
+    return res.status(201).json(participants);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
