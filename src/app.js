@@ -238,3 +238,48 @@ app.delete('/messages/:id', async (req, res) => {
   }
 });
 
+// Rota PUT /messages/:id
+app.put('/messages/:id', async (req, res) => {
+  const messageId = req.params.id;
+  const { to, text, type } = req.body;
+  const from = req.headers.user;
+
+  const schema = Joi.object({
+    to: Joi.string().required(),
+    text: Joi.string().required(),
+    type: Joi.string().valid('message', 'private_message').required()
+  });
+
+  const { error } = schema.validate({ to, text, type });
+  if (error) {
+    const errors = error.details.map(detail => detail.message);
+    return res.status(422).send(errors);
+  }
+
+  try {
+    const participant = await db.collection('participants').findOne({ name: from });
+    if (!participant) {
+      return res.status(422).send('Remetente não encontrado');
+    }
+
+    const message = await db.collection('messages').findOne({ _id: new ObjectId(messageId) });
+
+    if (!message) {
+      return res.status(404).send('Mensagem não encontrada');
+    }
+
+    if (message.from !== from) {
+      return res.status(401).send('Sem permissão para atualizar a mensagem');
+    }
+
+    await db.collection('messages').updateOne(
+      { _id: new ObjectId(messageId) },
+      { $set: { to, text, type } }
+    );
+
+    res.sendStatus(200);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
