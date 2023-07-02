@@ -56,10 +56,9 @@ app.post("/participants", async (req, res) => {
       type: "status",
       time: dayjs().format('HH:mm:ss')
     };
-
     await db.collection("messages").insertOne(successMessage);
 
-    return res.status(201);
+    return res.status(201).json(successMessage);
   } catch (err) {
     res.status(500).send(err.message);
   }
@@ -78,7 +77,7 @@ app.get("/participants", async (_, res) => {
 // Rota POST /messages
 app.post("/messages", async (req, res) => {
   const { to, text, type } = req.body;
-  const from = req.headers.user;
+  const from = req.body.from || req.headers.user;
 
   const schemaMessage = Joi.object({
     to: Joi.string().required(),
